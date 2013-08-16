@@ -1,6 +1,7 @@
 import sendgrid
 
 from auth import github_auth, sendgrid_auth
+from settings import organization, sender, subject
 from datetime import datetime, timedelta
 from dateutil import tz
 
@@ -9,18 +10,6 @@ from pygithub3.services.repos import Commits
 
 
 gh = Github(login=github_auth[0], password=github_auth[1])
-
-####################################################################
-#                      Summarizer Configurations                   #
-####################################################################
-
-organization = 'agiliq'
-
-# mailing configurations
-sender = "rakesh@agiliq.com"
-subject = "Agiliq-Github Summary for the day "
-
-####################################################################
 
 
 def get_repos(organization):
