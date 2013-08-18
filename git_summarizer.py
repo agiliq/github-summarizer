@@ -57,10 +57,13 @@ def get_commits_list(repo):
     """
     Takes a repo and returns the commit list in 'master' branch
     """
-    commits_list = []
-    commits_list = Commits(user=organization,
-                           repo=repo.name).list(sha='master',
-                                                path=None).all()
+    try:
+        commits_org = Commits(user=organization,
+                                 repo=repo.name)
+        commits_list= commits_org.list(sha='master',
+                                          path=None).all()
+    except:
+        commits_list = []
     return commits_list
 
 
