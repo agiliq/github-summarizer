@@ -44,7 +44,11 @@ def get_user_info(users):
             email = user.email
         except AttributeError:
             email = ''
-        item = email, user.name, user.login
+        try:
+            name = user.name
+        except AttributeError:
+            name = ''
+        item = email, name, user.login
         user_info.append(item)
     return user_info
 
