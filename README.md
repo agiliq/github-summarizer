@@ -3,7 +3,7 @@
 
 Description:
 ------------------------
-Github-summarizer creates daily summary of github commits that were done by the committers of the organisation and sends mails to all the members of it.
+Github-summarizer creates daily summary of github commits that were done by the members of the organisation and sends mails to all the members of it.
 
 Usage:
 -------------------------
