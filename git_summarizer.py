@@ -1,10 +1,20 @@
-import sendgrid
 import requests
+import sendgrid
+from auth import username, password, sendgrid_auth
+from settings import organization, sender, subject
 
 from datetime import date, timedelta
+from dateutil.parser import parse
 
-from auth import username, password
-from settings import organization, sender, subject
+
+yesterday = date.today() - timedelta(1)
+yesterday = yesterday.isoformat()
+
+
+email_to = [('rakesh@agiliq.com', 'Rakesh Vidya Chandra', 'krvc'),
+            ('balu@agiliq.com', 'Bala Subrahmanyam Varanasi', 'Balu-Varanasi'),
+            ('shabda@agiliq.com', 'Shabda Raaj', 'shabda'),
+            ('ramana@agiliq.com', 'Venkata Ramana C', 'arjunc77')]
 
 
 def get_organization_repos(org=organization):
@@ -12,56 +22,22 @@ def get_organization_repos(org=organization):
     Retuns all the repos in the given Organization
     """
     url = "https://api.github.com/orgs/{0}/repos"
-    repositories = []
-    repos = requests.get(url.format(org),
-                         params={'type': 'public', 'per_page': '100'},
-                         auth=(username, password))
-    for repo in repos.json:
-        repositories.append(repo['name'])
-    return repositories
+    repositories = requests.get(url.format(org),
+                                params={'type': 'all',
+                                        'per_page': '100'},
+                                auth=(username, password))
+    return repositories.json
 
 
-def get_members(org=organization):
-    url = "https://api.github.com/orgs/{0}/members"
-    members = []
-    member = requests.get(url.format(org),
-                          auth=(username, password))
-    for memb in member.json:
-        members.append(memb['login'])
-    return members
-
-
-def get_user_info(members):
-    """
-    Takes Github User objects and returns a list of tuples as below.
-    [('rakesh@agiliq.com', 'Rakesh Vidya Chandra', 'krvc'),
-     ('balu@agiliq.com', 'Bala Subrahmanyam Varanasi', 'Balu-Varanasi'),
-    ]
-    """
-    url = "https://api.github.com/users/{0}"
-    user_info = []
-    for member in members:
-        info = requests.get(url.format(member),
-                            auth=(username, password))
-        item = info.json['email'], info.json['name'], info.json['login']
-        user_info.append(item)
-    return user_info
-
-yesterday = date.today() - timedelta(1)
-
-
-def get_commits(repo):
+def get_commits(repo_name):
     """
     Takes a repo and returns the commit list in 'master' branch
     """
     url = "https://api.github.com/repos/agiliq/{0}/commits"
-    commits = []
-    commit_list = requests.get(url.format(repo),
+    commit_list = requests.get(url.format(repo_name),
                                params={'since': yesterday},
                                auth=(username, password))
-    for commit in commit_list.json:
-        commits.append(commit['commit']['message'])
-    return commits
+    return commit_list.json
 
 
 def send_mail(user_activity):
@@ -87,3 +63,46 @@ def send_mail(user_activity):
         message.add_to(person[0], person[1])
 
     sendgrid_obj.smtp.send(message)
+
+
+user_activity = {}
+github_body = ""
+
+
+def get_user_activity(repo_name, repo_url):
+
+    commit_list = get_commits(repo_name)
+
+    for commit in commit_list:
+
+        name = commit['commit']['committer']['name']
+        commit_date_time = parse(commit['commit']['committer']['date'])
+
+        for user in email_to:
+            if name not in user_activity.keys():
+                    user_activity[name] = ""
+
+            if name == user[2] or name == user[1]:
+                commit_url = repo_url + '/commit/' + commit["sha"]
+                github_body = "<hr/> <b>{0}</b> @ <font color=".format(
+                    commit_date_time.strftime("%H:%M"), name)
+                github_body += 'red'
+                github_body += ">{0}</font> <a href='{3}'>{1}</a>\
+                               <br/> {2} <br/>".format(repo_name,
+                                                       "comitted",
+                                                       commit["sha"][:10],
+                                                       commit_url)
+                github_body += "<font color='violet'>"
+                github_body += commit["commit"]["message"] + "</font><br/>"
+
+                if github_body:
+                    user_activity[name] += github_body
+                github_body = ""
+
+
+organization_repos = get_organization_repos()
+
+for repo in organization_repos:
+    get_user_activity(repo["name"],
+                      repo["html_url"])
+send_mail(user_activity)
