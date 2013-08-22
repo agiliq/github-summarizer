@@ -1,7 +1,7 @@
 import requests
 import sendgrid
 from auth import username, password, sendgrid_auth
-from settings import organization, sender, subject
+from settings import ORGANIZATION, SENDER, SUBJECT
 from mailing_list import email_to
 
 from datetime import date, timedelta
@@ -11,7 +11,7 @@ yesterday_object = date.today() - timedelta(1)
 yesterday = yesterday_object.isoformat()
 
 
-def get_organization_repos(org=organization):
+def get_organization_repos(org=ORGANIZATION):
     """
     Retuns all the repos in the given Organization
     """
@@ -64,8 +64,8 @@ def send_mail(user_activity):
             html += "<div>" + "<h3>" + key + "</h3>" + value + "</div>"
     html += "</body></html>"
 
-    message = sendgrid.Message(sender,
-                               subject,
+    message = sendgrid.Message(SENDER,
+                               SUBJECT,
                                "",
                                "<div>" + html + "</div>")
     for person in email_to:
