@@ -10,12 +10,6 @@ yesterday_object = date.today() - timedelta(1)
 yesterday = yesterday_object.isoformat()
 
 
-email_to = [('rakesh@agiliq.com', 'Rakesh Vidya Chandra', 'krvc'),
-            ('balu@agiliq.com', 'Bala Subrahmanyam Varanasi', 'Balu-Varanasi'),
-            ('shabda@agiliq.com', 'Shabda Raaj', 'shabda'),
-            ('ramana@agiliq.com', 'Venkata Ramana C', 'arjunc77')]
-
-
 def get_organization_repos(org=organization):
     """
     Retuns all the repos in the given Organization
