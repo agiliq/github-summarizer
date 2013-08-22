@@ -2,6 +2,7 @@ import requests
 import sendgrid
 from auth import username, password, sendgrid_auth
 from settings import organization, sender, subject
+from mailing_list import email_to
 
 from datetime import date, timedelta
 from dateutil.parser import parse
@@ -15,11 +16,14 @@ def get_organization_repos(org=organization):
     Retuns all the repos in the given Organization
     """
     url = "https://api.github.com/orgs/{0}/repos"
-    repositories = requests.get(url.format(org),
-                                params={'type': 'all',
-                                        'per_page': '100'},
-                                auth=(username, password))
-    return repositories.json
+
+    response = requests.get(url.format(org),
+                            params={'type': 'all',
+                                    'per_page': '100'},
+                            auth=(username, password))
+    if response.status_code is not 200:
+        return []
+    return response.json
 
 
 def get_commits(repo_name):
@@ -27,10 +31,13 @@ def get_commits(repo_name):
     Takes a repo and returns the commit list in 'master' branch
     """
     url = "https://api.github.com/repos/agiliq/{0}/commits"
-    commit_list = requests.get(url.format(repo_name),
-                               params={'since': yesterday},
-                               auth=(username, password))
-    return commit_list.json
+    response = requests.get(url.format(repo_name),
+                            params={'since': yesterday},
+                            auth=(username, password))
+    if response.status_code is not 200:
+        return []
+    return response.json
+
 
 def get_last_updated_repos(repositories):
     last_updated_repositories = []
@@ -76,35 +83,39 @@ def get_user_activity(repo_name, repo_url):
     commit_list = get_commits(repo_name)
 
     for commit in commit_list:
+        email = commit['commit']['committer']['email']
 
-        name = commit['commit']['committer']['name']
+        if email not in email_to.keys():
+            continue
+
         commit_date_time = parse(commit['commit']['committer']['date'])
+        name = email_to[email]['full_name']
 
-        for user in email_to:
-            if name not in user_activity.keys():
-                    user_activity[name] = ""
+        if name not in user_activity.keys():
+            user_activity[name] = ""
 
-            if name == user[2] or name == user[1]:
-                commit_url = repo_url + '/commit/' + commit["sha"]
-                github_body = "<hr/> <b>{0}</b> @ <font color=".format(
-                    commit_date_time.strftime("%H:%M"), name)
-                github_body += 'red'
-                github_body += ">{0}</font> <a href='{3}'>{1}</a>\
-                               <br/> {2} <br/>".format(repo_name,
-                                                       "comitted",
-                                                       commit["sha"][:10],
-                                                       commit_url)
-                github_body += "<font color='violet'>"
-                github_body += commit["commit"]["message"] + "</font><br/>"
+        commit_url = repo_url + '/commit/' + commit["sha"]
+        github_body = "<hr/> <b>{0}</b> @ <font color=".format(
+            commit_date_time.strftime("%H:%M"), name)
+        github_body += 'red'
+        github_body += ">{0}</font> <a href='{3}'>{1}</a>\
+                       <br/> {2} <br/>".format(repo_name,
+                                               "comitted",
+                                               commit["sha"][:10],
+                                               commit_url)
+        github_body += "<font color='violet'>"
+        github_body += commit["commit"]["message"] + "</font><br/>"
 
-                if github_body:
-                    user_activity[name] += github_body
-                github_body = ""
+        if github_body:
+            user_activity[name] += github_body
+        github_body = ""
 
 
 organization_repos = get_organization_repos()
+recently_updated_repos = get_last_updated_repos(organization_repos)
 
-for repo in organization_repos:
+for repo in recently_updated_repos:
     get_user_activity(repo["name"],
                       repo["html_url"])
+
 send_mail(user_activity)
