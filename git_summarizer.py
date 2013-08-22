@@ -6,9 +6,8 @@ from settings import organization, sender, subject
 from datetime import date, timedelta
 from dateutil.parser import parse
 
-
-yesterday = date.today() - timedelta(1)
-yesterday = yesterday.isoformat()
+yesterday_object = date.today() - timedelta(1)
+yesterday = yesterday_object.isoformat()
 
 
 email_to = [('rakesh@agiliq.com', 'Rakesh Vidya Chandra', 'krvc'),
@@ -38,6 +37,15 @@ def get_commits(repo_name):
                                params={'since': yesterday},
                                auth=(username, password))
     return commit_list.json
+
+def get_last_updated_repos(repositories):
+    last_updated_repositories = []
+    for repository in repositories:
+        last_udpated = parse(repository["updated_at"])
+        date_delta = last_udpated.date() - yesterday_object
+        if date_delta.days >= 0:
+            last_updated_repositories.append(repository)
+    return last_updated_repositories
 
 
 def send_mail(user_activity):
