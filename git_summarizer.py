@@ -1,11 +1,12 @@
+from datetime import date, timedelta
+from dateutil.parser import parse
+
 import requests
 import sendgrid
+
 from auth import username, password, sendgrid_auth
 from settings import ORGANIZATION, SENDER, SUBJECT
 from mailing_list import email_to
-
-from datetime import date, timedelta
-from dateutil.parser import parse
 
 yesterday_object = date.today() - timedelta(1)
 yesterday = yesterday_object.isoformat()
@@ -40,6 +41,10 @@ def get_commits(repo_name):
 
 
 def get_last_updated_repos(repositories):
+    """
+    Takes repositories and returns the repositories that have been
+    updated in last 24 hours.
+    """
     last_updated_repositories = []
     for repository in repositories:
         last_udpated = parse(repository["updated_at"])
