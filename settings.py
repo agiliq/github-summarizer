@@ -2,9 +2,11 @@
 #                      Summarizer Configurations                   #
 ####################################################################
 
-organization = 'agiliq'
 # mailing configurations
-sender = "rakesh@agiliq.com"
-subject = "Agiliq-Github Summary for the day "
+SENDER = "rakesh@agiliq.com"
+SUBJECT = "Agiliq-Github Summary for the day "
+
+ORGANIZATION = 'agiliq'
+
 
 ####################################################################
