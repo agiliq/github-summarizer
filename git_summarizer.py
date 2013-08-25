@@ -11,6 +11,9 @@ from mailing_list import email_to
 yesterday_object = date.today() - timedelta(1)
 yesterday = yesterday_object.isoformat()
 
+user_activity = {}
+github_body = ""
+
 
 def get_organization_repos(org=ORGANIZATION):
     """
@@ -74,13 +77,10 @@ def send_mail(user_activity):
                                "",
                                "<div>" + html + "</div>")
     for person in email_to:
-        message.add_to(person[0], person[1])
+        message.add_to(person,
+                       email_to[person]['full_name'])
 
     sendgrid_obj.smtp.send(message)
-
-
-user_activity = {}
-github_body = ""
 
 
 def get_user_activity(repo_name, repo_url):
