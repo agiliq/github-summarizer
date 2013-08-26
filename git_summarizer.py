@@ -4,15 +4,12 @@ from dateutil.parser import parse
 import requests
 import sendgrid
 
-from auth import username, password, sendgrid_auth
-from settings import ORGANIZATION, SENDER, SUBJECT
-from mailing_list import email_to
+from auth import USERNAME, PASSWORD, SENDGRID_AUTH
+from settings import ORGANIZATION, SENDER, SUBJECT, \
+    RECEIVER, RECEIVER_NAME, USERS, NUMBER_OF_DAYS
 
-yesterday_object = date.today() - timedelta(1)
+yesterday_object = date.today() - timedelta(NUMBER_OF_DAYS)
 yesterday = yesterday_object.isoformat()
-
-user_activity = {}
-github_body = ""
 
 
 def get_organization_repos(org=ORGANIZATION):
@@ -24,7 +21,7 @@ def get_organization_repos(org=ORGANIZATION):
     response = requests.get(url.format(org),
                             params={'type': 'all',
                                     'per_page': '100'},
-                            auth=(username, password))
+                            auth=(USERNAME, PASSWORD))
     if response.status_code is not 200:
         return []
     return response.json
@@ -37,7 +34,7 @@ def get_commits(repo_name):
     url = "https://api.github.com/repos/agiliq/{0}/commits"
     response = requests.get(url.format(repo_name),
                             params={'since': yesterday},
-                            auth=(username, password))
+                            auth=(USERNAME, PASSWORD))
     if response.status_code is not 200:
         return []
     return response.json
@@ -52,18 +49,18 @@ def get_last_updated_repos(repositories):
     for repository in repositories:
         last_udpated = parse(repository["updated_at"])
         date_delta = last_udpated.date() - yesterday_object
-        if date_delta.days >= 0:
+        if date_delta.days > 0:
             last_updated_repositories.append(repository)
     return last_updated_repositories
 
 
-def send_mail(user_activity):
+def send_mail(activity):
     """
     Takes user activity and sends email to all the members
     of the 'organization'
     """
-    sendgrid_obj = sendgrid.Sendgrid(sendgrid_auth[0],
-                                     sendgrid_auth[1],
+    sendgrid_obj = sendgrid.Sendgrid(SENDGRID_AUTH[0],
+                                     SENDGRID_AUTH[1],
                                      secure=True)
 
     html = "<html><body>"
@@ -76,51 +73,49 @@ def send_mail(user_activity):
                                SUBJECT,
                                "",
                                "<div>" + html + "</div>")
-    for person in email_to:
-        message.add_to(person,
-                       email_to[person]['full_name'])
-
+    message.add_to(RECEIVER,
+                   RECEIVER_NAME)
     sendgrid_obj.smtp.send(message)
 
 
-def get_user_activity(repo_name, repo_url):
+def get_user_activity(repositories):
 
-    commit_list = get_commits(repo_name)
+    user_activity = {}
+    for repo in repositories:
+        commit_list = get_commits(repo["name"])
+        for commit in commit_list:
+            email = commit['commit']['committer']['email']
 
-    for commit in commit_list:
-        email = commit['commit']['committer']['email']
+            if email not in USERS.keys():
+                continue
 
-        if email not in email_to.keys():
-            continue
+            commit_date_time = parse(commit['commit']['committer']['date'])
+            name = USERS[email]['full_name']
 
-        commit_date_time = parse(commit['commit']['committer']['date'])
-        name = email_to[email]['full_name']
+            if name not in user_activity.keys():
+                user_activity[name] = ""
 
-        if name not in user_activity.keys():
-            user_activity[name] = ""
+            commit_url = repo["html_url"] + '/commit/' + commit["sha"]
+            github_body = "<hr/> <b>{0}</b> @ <font color=".format(
+                commit_date_time.strftime("%H:%M"), name)
+            github_body += 'red'
+            github_body += ">{0}</font><a href='{2}'>\
+                            {1}</a>".format(repo["name"],
+                                            "comitted",
+                                            commit_url)
+            github_body += "<br />"
 
-        commit_url = repo_url + '/commit/' + commit["sha"]
-        github_body = "<hr/> <b>{0}</b> @ <font color=".format(
-            commit_date_time.strftime("%H:%M"), name)
-        github_body += 'red'
-        github_body += ">{0}</font> <a href='{3}'>{1}</a>\
-                       <br/> {2} <br/>".format(repo_name,
-                                               "comitted",
-                                               commit["sha"][:10],
-                                               commit_url)
-        github_body += "<font color='violet'>"
-        github_body += commit["commit"]["message"] + "</font><br/>"
+            github_body += "<font color='violet'>"
+            github_body += commit["commit"]["message"] + "</font><br/>"
 
-        if github_body:
-            user_activity[name] += github_body
-        github_body = ""
+            if github_body:
+                user_activity[name] += github_body
+            github_body = ""
+
+    return user_activity
 
 
 organization_repos = get_organization_repos()
 recently_updated_repos = get_last_updated_repos(organization_repos)
-
-for repo in recently_updated_repos:
-    get_user_activity(repo["name"],
-                      repo["html_url"])
-
+user_activity = get_user_activity(recently_updated_repos)
 send_mail(user_activity)
