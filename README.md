@@ -7,11 +7,10 @@ Github-summarizer creates daily summary of github commits that were done by the 
 
 Usage:
 -------------------------
-* Add your authentication details in `auth.py`
+* Add your authentication details according to `settings.py`
 * `python git_summarizer.py` will create the summary and emails it.
 
 Features:
 --------------------------
-- Automatically checks the emails of all the users in the organisation
 - Checks the commits of those users.
-- Sends mail-summary of commits.
+- Sends mail-summary of all the commits.
